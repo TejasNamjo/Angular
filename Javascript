@@ -1,0 +1,672 @@
+Javascript Built-in Types 
+In JavaScript, variables don’t have types—values have types. Variables can hold any value, at any time.  
+The following built-in types are available:  
+string  
+number  
+boolean  
+null and undefined  
+object  
+symbol (new to ES6) 
+All of these types except object are called “primitives.” 
+ 
+typeof null === "object"; // true 
+This original bug in JS has persisted for nearly two decades, and will likely never be fixed because there’s so much existing web content that relies on its buggy behavior that “fixing” the bug would create more “bugs” and break a lot of web software. 
+null is the only primitive value that is “falsy” but which also returns "object" from the typeof check. 
+ 
+undefined vs undeclared 
+An “undefined” variable is one that has been declared in the accessible scope, but at the moment has no other value in it.  
+By contrast, an “undeclared” variable is one that has not been formally declared in the accessible scope  
+var a;  
+typeof a; // "undefined"  
+typeof b;//”undefined”  
+The typeof operator returns "undefined" even for “undeclared” (or “not defined”) variables.  
+undefined hasn’t had a value yet.  
+null had a value and doesn’t anymore 
+ 
+special safety guard in the behavior of typeof--> typeof operator returns "undefined" even for “undeclared” (or “not defined”) variables It doesnot throw any error. 
+ 
+The expression void ___ “voids” out any value, so that the result of the expression is always the undefined value. It doesn’t modify the existing value; it just ensures that no value comes back from the operator expression:  
+var a = 42;  
+console.log( void a, a ); // undefined 42 
+ 
+NUMBER  
+JavaScript has just one numeric type: number. This type includes both “integer” values and fractional decimal numbers. 
+JavaScript numbers are double-precision floating-point numbers. 
+ Integers in JavaScript are just a subset of doubles rather than a separate datatype. 
+ Bitwise operators treat numbers as if they were 32-bit signed integers. 
+ 
+Small Decimal Values  
+All of the bitwise operators work the same way, converting their inputs to integers and performing their operations on the integer bit patterns before converting the results back to standard JavaScript floating-point numbers. In general, these conversions require extra work in JavaScript engines: Since numbers are stored as floating-point, they have to be converted to integers and then back to floating-point again. 
+While 64 bits of precision is reasonably large, doubles can still only represent a finite set of numbers, rather than the infinite set of real numbers. Floating-point arithmetic can only produce approximate results, rounding to the nearest representable real number. 
+The most (in)famous side effect of using binary floating-point numbers.  
+0.1 + 0.2 === 0.3; // false  
+the representations for 0.1 and 0.2 in binary floating point are not exact, so when they are added, the result is not exactly 0.3. It’s really close, 0.30000000000000004, but if your comparison fails.  
+The most commonly accepted practice is to use a tiny “rounding error” value as the tolerance for comparison. This tiny value is often called “machine epsilon,” which is commonly 2^-52 (2.220446049250313e-16) for the kind of numbers in JavaScript.  
+As of ES6, Number.EPSILON is predefined with this tolerance value. 
+We can use this Number.EPSILON to compare two numbers for “equality” (within the rounding error tolerance):  
+function numbersCloseEnoughToEqual(n1,n2) {  
+return Math.abs( n1 - n2 ) < Number.EPSILON;  
+}  
+var a = 0.1 + 0.2;  
+var b = 0.3;  
+numbersCloseEnoughToEqual( a, b ); // true  
+numbersCloseEnoughToEqual( 0.0000001, 0.0000002 ); // false  
+Zeros  
+While it may confuse the mathematics-minded reader, JavaScript has both a normal zero 0 (otherwise known as a positive zero +0) and a negative zero -0.  
+a = 0*-3 //-0  
+a = 0 / -3 //-0  
+if you try to stringify a negative zero value, it will always be reported as "0"  
+a.toString() //”0”  
+Also  
+0 == -0 //true 
+JavaScript can be surprisingly forgiving when it comes to type errors. 
+In many cases, rather than raising an error, JavaScript coerces a value to the expected type by following various automatic conversion protocols. For example, the arithmetic operators -, *, /, and % all attempt to convert their arguments to numbers before doing their calculation. The operator + is subtler, because it is overloaded to perform either numeric addition or string concatenation, depending on the types of its arguments. 
+ 
+A variable that turns out to be null will not fail in an arithmetic calculation, but silently convert to 0; an undefined variable will convert to the special floating-point value NaN. 
+Rather than immediately throwing an exception, these coercions cause the calculation to continue with often confusing and unpredictable results. 
+• Type errors can be silently hidden by implicit coercions. 
+• The + operator is overloaded to do addition or string concatenation depending on its argument types. 
+• Objects are coerced to numbers via valueOf and to strings via toString. 
+• Objects with valueOf methods should implement a toString method that provides a string representation of the number produced by valueOf. 
+• Use typeof or comparison to undefined rather than truthiness to test for undefined values. 
+• Object wrappers for primitive types do not have the same behavior as their primitive values when compared for equality. 
+• Getting and setting properties on primitives implicitly creates object wrappers. 
+Arrays  
+An array is an object that holds values (of any type) not particularly in named properties/keys, but rather in numerically indexed positions.  
+You don’t need to presize your arrays (see “Array(..)”), you can just declare them and add values as you see fit.  
+Be careful about creating “sparse” arrays (leaving or creating empty/missing slots):  
+var a = [ ];  
+a[0] = 1;  
+// no `a[1]` slot set here  
+a[2] = 3 ;  
+a[1]; // undefined  
+a.length; // 3  
+While that works, it can lead to some confusing behavior with the “empty slots” you leave in between. While the slot appears to have the undefined value in it, it will not behave the same as if the slot is explicitly set (a[1] = undefined).   
+Arrays are numerically indexed (as you’d expect), but the tricky thing is that they also are objects that can have string keys/properties added to them (but which don’t count toward the length of the array):  
+a=[1,2,3]                   a.length //3  
+a[“first”]=4               a.length //3  
+If a string value intended as a key can be coerced to a standard base-10 number, then it is assumed that you wanted to use it as a number index rather than as a string key  
+a[“1”]=10;  
+a[1] //10 “1” coerced to number  
+“Using delete on an array value will remove that slot from the array, but even if you remove the final element, it does not update the length property”  
+Both of them create Array with length 3, but the difference is 1st creates array with three empty slots (forEach, join .. and other array functions skips these values). 
+But the 2nd creates array with three empty slots and initializes with undefined value, so these slots are not skipped in Array methos. 
+var a = new Array(3) 
+ 
+var a = Array.apply( null, { length: 3 } ); 
+Equivalent to  
+var a = Array.apply( null, [undefined, undefined, undefined] ); 
+While Array.apply( null, { length: 3 } ) is a strange and verbose way to create an array filled with undefined values, it’s vastly better and more reliable than what you get with the footgun’ish Array(3) empty slots. 
+ 
+JavaScript strings are immutable, while arrays are quite mutable.  
+Consequence of immutable strings is that none of the string methods that alter its contents can modify in-place, but rather must create and return new strings. By contrast, many of the array methods that change array contents actually do modify in-place. 
+ 
+The result of the constructor form of value creation (new String("abc")) is an object wrapper around the primitive ("abc") value. 
+Importantly, typeof shows that these objects are not their own special types, but more appropriately they are subtypes of the object type. 
+ 
+Error() 
+The main reason you’d want to create an error object is that it captures the current execution stack context into the object (in most JS engines, revealed as a read-only .stack property once constructed). This stack context includes the function call stack and the line number where the error object was created, which makes debugging that error much easier. 
+ 
+some of the native prototypes aren’t just plain objects 
+typeof Function.prototype;          // "function" 
+Function.prototype();               // it's an empty function! 
+ 
+FUNCTIONS  
+functions are a subtype of objects—typeof returns "function", which implies that a function is a main type—and can thus have properties, but you typically will only use function object properties (like foo.bar) in limited cases.  
+The function object has a length property set to the number of formal parameters.  
+Symbol(..)  
+New as of ES6, an additional primitive value type has been added, called “Symbol.” Symbols are special “unique” (not strictly guaranteed!) values that can be used as properties on objects with little fear of any collision. They’re primarily designed for special built-in behaviors of ES6 constructs, but you can also define your own symbols. 
+“falsy” values list: 
+undefined 
+null 
+false 
++0, -0, and NaN 
+"" 
+A “falsy object” is a value that looks and acts like a normal object (properties, etc.), but when you coerce it to a boolean, it coerces to a false value. 
+ 
+var c = "3.14"; 
+var d = +c; 
+d; // 3.14 
++c here is showing the unary operator form (operator with only one operand) of the + operator. Instead of performing mathematic addition (or string concatenation—see below), the unary + explicitly coerces its operand (c) to a number value. 
+Another common usage of the unary + operator is to coerce a Date object into a number, because the result is the Unix timestamp (milliseconds elapsed since 1 January 1970 00:00:00 UTC) representation of the date/time value: 
+var d = new Date( "Mon, 18 Aug 2014 08:53:06 CDT" ); 
++d; // 1408369986000 
+The ~ operator first “coerces” to a 32-bit number value, and then performs a bitwise negation (flipping each bit’s parity). 
+~42;    // -(42+1) ==> -43 
+TRUNCATING BITS 
+There’s one more place ~ may show up in code you run accross: some developers use the double tilde ~~ to truncate the decimal part of a number (i.e., “coerce” it to a whole number integer). 
+Parsing a numeric value out of a string is tolerant of non-numeric characters—it just stops parsing left-to-right when encountered—whereas coercion is not tolerant and fails, resulting in the NaN value. 
+var b = "42px"; 
+Number( b );    // NaN 
+parseInt( b );  // 42 
+Parse a string as a number when you don’t know/care what other non-numeric characters there may be on the right-hand side.  
+Coerce a string (to a number) when the only acceptable values are numeric. 
+ 
+The unary ! negate operator explicitly coerces a value to a boolean. The problem is that it also flips the value from truthy to falsy or vice versa. 
+[developers explicitly coerce to boolean is to use the !! double-negate operator, because the second ! will flip the parity back to the original.] 
+ 
+var a = [1,2]; 
+b = [3,4]; 
+a + b; // "1,23,4" 
+The + algorithm (when an object value is an operand) will concatenate if either operand is either already a string, or if the following steps produce a stringrepresentation. So, when + receives an object (including array) for either operand, it first calls the ToPrimitive abstract operation  on the value, which then calls the [[DefaultValue]] algorithm with a context hint of number. 
+The two arrays thus become "1,2" and"3,4", respectively. Now, + concatenates the two strings as you’d normally expect: "1,23,4". 
+ 
+The - operator is defined only for numeric subtraction, so a - 0 forces a’s value to be coerced to a number. While far less common, a * 1 or a / 1 would accomplish the same result, as those operators are also only defined for numeric operations. 
+var a = { 
+    valueOf: function() { return 42; },     
+  toString: function() { return 4; } 
+   }; 
+a + "";         // "42" 
+String( a );    // "4" 
+a + "" invokes valueOf() on the a value, whose return value is then finally converted to a string via the internal ToStringabstract operation. But String(a) just invokes toString() directly. 
+ 
+The value produced by a && or || operator is not necessarily of type Boolean. The value produced will always be the value of one of the two operand expressions. 
+The && operator “selects” the second operand if and only if the first operand tests as truthy, and this usage is sometimes called the “guard operator”. 
+Symbol Coercion 
+explicit coercion of a symbol to a string is allowed, but implicit coercion of the same is disallowed and throws an error. 
+symbol values cannot coerce to number at all (throws an error either way), but strangely they can both explicitlyand implicitly coerce to boolean (always true). 
+Loose Equals Versus Strict Equals 
+"== allows coercion in the equality comparison and === disallows coercion.” 
+[== and === behave identically in the case where two objects are being compared!] 
+In the ES5 spec: 
+1 If Type(x) is Number and Type(y) is String, return the result of the comparison x == ToNumber(y). 
+2 If Type(x) is String and Type(y) is Number, return the result of the comparison ToNumber(x) == y. 
+COMPARING: NULLS TO UNDEFINEDS 
+If x is null and y is undefined, return true. 
+If x is undefined and y is null, return true 
+null and undefined can be treated as indistinguishable for comparison purposes, if you use the == loose equality operator to allow their mutual implicit coercion. 
+COMPARING: OBJECTS TO NONOBJECTS 
+If Type(x) is either String or Number and Type(y) is Object, return the result of the comparison x == ToPrimitive(y). 
+If Type(x) is Object and Type(y) is either String or Number, return the result of the comparison ToPrimitive(x) == y. 
+"0" == false;           // true -- UH OH! 
+false == 0;             // true -- UH OH! 
+false == "";            // true -- UH OH! 
+false == [];            // true -- UH OH! 
+"" == 0;                // true -- UH OH! 
+"" == [];               // true -- UH OH! 
+0 == [];                // true -- UH OH! 
+SAFELY USING IMPLICIT COERCION 
+If either side of the comparison can have true or false values, don’t ever, EVER use ==. 
+If either side of the comparison can have [], "", or 0 values, seriously consider not using ==. 
+In these scenarios, it’s almost certainly better to use === instead of ==, to avoid unwanted coercion. 
+Statement Completion Values 
+It’s a fairly little known fact that statements all have completion values (even if that value is just undefined). 
+Any regular { .. } block has a completion value of the completion value of its last contained statement/expression. 
+var b; 
+if (true) {    b = 4 + 38;} 
+If you typed that into your console/REPL, you’d probably see 42 reported, since 42 is the completion value of the if block. 
+In other words, the completion value of a block is like an implicit return of the last statement value in the block. 
+We can’t capture the completion value of a statement and assign it into another variable in any easy syntactic/grammatical way. 
+We could use the much maligned eval(..) (sometimes pronounced “evil”) function to capture this completion value: 
+var a, b; 
+a = eval( "if (true) { b = 4 + 38; }" ); 
+a;  // 42 
+proposal for ES7 called the “do expression.”  
+The do { .. } expression executes a block (with one or many statements in it), and the final statement completion value inside the block becomes the completion value of the do expression, which can then be assigned to a as shown. 
+The , statement-series comma operator. This operator allows you to string together multiple standalone expression statements into a single statement: 
+var a = 42, b; 
+b = ( a++, a ); 
+a;  // 43 
+b;  // 43 
+Using Variables Too Early 
+ES6 defines a (frankly confusingly named) new concept called the TDZ (“Temporal Dead Zone”). 
+The TDZ refers to places in code where a variable reference cannot yet be made, because it hasn’t reached its required initialization. 
+{    a = 2;      // ReferenceError!     
+let a;} 
+The assigment a = 2 is accessing the a variable (which is indeed block-scoped to the { .. } block) before it’s been initialized by the let a declaration, so it’s in the TDZ for a and throws an error. 
+Function Arguments 
+Another example of a TDZ violation can be seen with ES6 default parameter values 
+var b = 3; 
+function foo( a = 42, b = a + b + 5 ) {    // ..} 
+The b reference in the assignment would happen in the TDZ for the parameter b (not pull in the outer breference), so it will throw an error. However, the a is fine since by that time it’s past the TDZ for parameter a. 
+ 
+Try catch finally blocks 
+A return inside a finally has the special ability to override a previous return from the try or catchclause, but only if return is explicitly called. 
+ 
+SWITCH 
+The matching that occurs between the a expression and each case expression is identical to the ===algorithm. 
+However, you may wish to allow coercive equality (aka ==) and to do so you’ll need to sort of “hack” the switch statement a bit: 
+var a = "42"; 
+switch (true) { 
+case a == 10:console.log( "10 or '10'" );break; 
+case a == 42:console.log( "42 or '42'" );break; 
+default:// never gets here}//42 or ‘42’ 
+ 
+THIS  
+The this mechanism provides a more elegant way of implicitly “passing along” an object reference, leading to cleaner API design and easier reuse.  
+setTimeout( function(){  
+// anonymous function (no name), cannot  
+// refer to itself AS it has no Name  
+}, 10 );  
+this is not an author-time binding but a runtime binding. It is contextual based on the conditions of the function’s invocation. ‘this’ binding has nothing to do with where a function is declared, but has instead everything to do with the manner in which the function is called.  
+To understand this binding, we have to understand the call-site: the location in code where a function is called (not where it’s declared). 
+You must inspect the call-site and determine which of four rules applies.  
+Default Binding  
+The first rule we will examine comes from the most common case of function calls: standalone function invocation. Think of this this rule as the default catch-all rule when none of the other rules apply.  
+A subtle but important detail is that though the overall this binding rules are entirely based on the call-site, the global object is only eligible for the default binding if the contents of foo() are not running in strict mode.  
+Implicit Binding  
+Another rule to consider is whether the call-site has a context object, also referred to as an owning or containing object, though these alternate terms could be slightly misleading.  
+Implicitly lost  
+One of the most common frustrations that this binding creates is when an implicitly bound function loses that binding, which usually means it falls back to the default binding of either the global object or undefined, depending on strict mode. 
+function foo() {  
+console.log( this.a );  
+}  
+var obj = {  
+a: 2,  
+foo: foo };  
+var bar = obj.foo; // function reference/alias!  
+var a = "oops, global"; // `a` also property on global object  
+bar(); // "oops, global"  
+bind(..) returns a new function that is hardcoded to call the original function with the this context set as you specified.  
+NEW BINDING  
+In JS, constructors are just functions that happen to be called with the new operator in front of them.  
+When a function is invoked with new in front of it  
+1. A brand new object is created (aka constructed) out of thin air.  
+2. The newly constructed object is [[Prototype]]-linked.  
+3. The newly constructed object is set as the this binding for that function call.  
+4. Unless the function returns its own alternate object, the new-invoked function call will automatically return the newly constructed object.  
+DETERMINING THIS  
+1) Is the function called with new (new binding)? If so, this is the newly constructed object.  
+var bar = new foo()  
+2) Is the function called with call or apply (explicit binding), even hidden inside a bind hard binding? If so, this is the explicitly specified object.  
+var bar = foo.call( obj2 )  
+3) Is the function called with a context (implicit binding), otherwise known as an owning or containing object? If so, this is that context object.  
+var bar = obj1.foo()  
+4) Otherwise, default the this (default binding). If in strict mode, pick undefined, otherwise pick the global object.  
+var bar = foo()  
+Binding Exceptions  
+As usual, there are some exceptions to the “rules.”  
+IGNORED THIS  
+If you pass null or undefined as a this binding parameter to call, apply, or bind, those values are effectively ignored, and instead the default binding rule applies  
+INDIRECTION  
+One of the most common ways that indirect references occur is from an assignment:  
+function foo() {  
+console.log( this.a );  
+}  
+var a = 2;  
+var o = { a: 3, foo: foo };  
+var p = { a: 4 };  
+o.foo(); // 3  
+(p.foo = o.foo)(); // 2  
+The result value of the assignment expression p.foo = o.foo is a reference to just the underlying function object. As such, the effective call-site is just foo(), not p.foo() or o.foo() as you might expect. Per the rules mentioned earlier, the default binding rule applies.  
+Lexical this  
+Normal functions abide by the four rules we just covered. But ES6 introduces a special kind of function that does not use these rules: the arrow-function.  
+Arrow-functions are signified not by the function keyword, but by the so-called “fat arrow” operator, =>. Instead of using the four standard this rules, arrow-functions adopt the this binding from the enclosing (function or global) scope. 
+ 
+ 
+Internal [[Class]] 
+Values that are typeof of "object" (such as an array) are additionally tagged with an internal [[Class]]property 
+Object.prototype.toString.call( [1,2,3] );// "[object Array]"Object.prototype.toString.call( /regex-literal/i );// "[object RegExp]" 
+ 
+Boxing Wrappers 
+These object wrappers serve a very important purpose. Primitive values don’t have properties or methods, so to access .length or .toString() you need an object wrapper around the value. Thankfully, JS will automatically box (aka wrap) the primitive value to fulfill such accesses 
+ 
+OBJECTS  
+Objects come in two forms: the declarative (literal) form and the constructed form.  
+The literal syntax for an object looks like this:  
+var myObj = { key: value  
+                        // ... };  
+The constructed form looks like this:  
+var myObj = new Object();  
+myObj.key = value; 
+The constructed form and the literal form result in exactly the same sort of object. The only difference really is that you can add one or more key/value pairs to the literal declaration, whereas with constructed-form objects, you must add the properties one by one.  
+ES6 adds computed property names, where you can specify an expression, surrounded by a [ ] pair, in the key-name position of an object-literal declaration  
+Arrays are objects, so even though each index is a positive integer, you can also add properties onto the array.  
+Object.assign does shallow copy  
+Object.assign(..) takes a target object as its first parameter, and one or more source objects as its subsequent parameters. It iterates over all the enumerable (see the following code), owned keys (immediately present) on the source object(s) and copies them (via = assignment only) to the target. It also, helpfully, returns the target. 
+PROPERTY DESCRIPTORS  
+Object.defineProperty(..) to add a new property, or modify an existing one  
+It includes following characteristics:  
+Value, writable, enumerable, and configurable.  
+Writable  
+The ability for you to change the value of a property is controlled by writable.  
+Object.defineProperty( myObject, "a", {  
+value: 2,  
+writable: false, // not writable!  
+configurable: true,  
+enumerable: true  
+} );  
+Configurable  
+As long as a property is currently configurable, we can modify its descriptor definition, using the same defineProperty(..) utility.  
+Another thing configurable:false prevents is the ability to use the delete operator to remove an existing property.  
+[delete is only used to remove object properties] 
+There’s a nuanced exception to be aware of: even if the property is already configurable:false, writable can always be changed from true to false without error, but not back to true if already false. 
+Enumerable  
+this characteristic controls whether a property will show up in certain object-property enumerations, such as the for..in loop. 
+Object constant  
+By combining writable:false and configurable:false, you can essentially create a constant (cannot be changed, redefined, or deleted) as an object property  
+Prevent extensions  
+If you want to prevent an object from having new properties added to it, but otherwise leave the rest of the object’s properties alone, call Object.preventExtensions(ObjName)  
+Seal  
+Object.seal(..) creates a “sealed” object, which means it takes an existing object and essentially calls Object.preventExtensions(..) on it, but also marks all its existing properties as configurable:false.  
+Freeze  
+Object.freeze(..) creates a frozen object, which means it takes an existing object and essentially calls Object.seal(..) on it, but it also marks all “data accessor” properties as writable:false, so that their values cannot be changed. 
+[[GET]]  
+The default built-in [[Get]] operation for an object first inspects the object for a property of the requested name, and if it finds it, it will return the value accordingly.  
+But one important result of this [[Get]] operation is that if it cannot through any means come up with a value for the requested property, it instead returns the value undefined  
+var myObject = {  
+a: 2 };  
+myObject.b; // undefined  
+[[PUT]]  
+Since there’s an internally defined [[Get]] operation for getting a value from a property, it should be obvious there’s also a default [[Put]] operation.  
+When you define a property to have either a getter or a setter or both, its definition becomes an “accessor descriptor”.  
+For accessor descriptors, the value and writable characteristics of the descriptor are moot and ignored, and instead JS considers the set and get characteristics of the property (as well as configurable and enumerable).  
+var myObject = {  
+// define a getter for `a`  
+get a() {  
+return 2;  
+}  
+};  
+Object.defineProperty(  
+myObject, // target  
+"b", // property name  
+{ // descriptor  
+get: function(){ return this.a * 2 }, // define a getter for `b`  
+enumerable: true // make sure `b` shows up as an object property  
+}  
+);  
+myObject.a; // 2  
+myObject.b; // 4  
+The in operator will check to see if the property is in the object, or if it exists at any higher level of the [[Prototype]] chain object traversal  
+("b" in myObject);  
+for(i in myObject) {}  
+hasOwnProperty(..) checks to see if only myObject has the property or not, and will not consult the [[Prototype]] chain.  
+Iteration  
+The for..in loop iterates over the list of enumerable properties on an object (including its [[Prototype]] chain). 
+[for..in loops applied to arrays can give somewhat unexpected results, in that the enumeration of an array will include not only all the numeric indices, but also any enumerable properties.]  
+forEach(..) will iterate over all values in the array, and it ignores any callback return values.  
+every(..) keeps going until the end or the callback returns a false (or “falsy”) value, some(..) keeps going until the end or the callback returns a true (or “truthy”) value 
+ ES6 adds a for..of loop syntax for iterating over arrays (and objects, if the object defines its own custom iterator): 
+var myArray = [ 1, 2, 3 ]; 
+for (var v of myArray)  
+{    console.log( v );} 
+While arrays do automatically iterate in for..of loops, regular objects do not have a built-in @@iterator. 
+[[Prototype]]  
+Objects in JavaScript have an internal property, denoted in the specification as [[Prototype]], which is simply a reference to another object.  
+The top end of every normal [[Prototype]] chain is the built-in Object.prototype. This object includes a variety of common utilities used all over JS.  
+If a normal data accessor property named foo is found anywhere higher on the [[Prototype]] chain, and it’s not marked as read-only (writable:false), then a new property called foo is added directly to myObject, resulting in a shadowed property.  
+ 
+If a foo is found higher on the [[Prototype]] chain, but it’s marked as read-only (writable:false), then both the setting of that existing property as well as the creation of the shadowed property on myObject are disallowed. If the code is running in strict mode, an error will be thrown. Otherwise, the setting of the property value will silently be ignored. Either way, no shadowing occurs.  
+ 
+If a foo is found higher on the [[Prototype]] chain and it’s a setter, then the setter will always be called. No foo will be added to (aka shadowed on) myObject, nor will the foo setter be redefined.  
+If you want to shadow foo in cases 2 and 3, you cannot use = assignment, but must instead use Object.defineProperty(..).  
+function Foo() {  
+// ...  
+}  
+var a = new Foo();  
+Object.getPrototypeOf( a ) === Foo.prototype; 
+The most direct way to explain it is that each object created from calling new Foo() will end up (somewhat arbitrarily) [[Prototype]]-linked to this “Foo dot prototype” object.  
+In JavaScript, there are no such copy actions performed. You don’t create multiple instances of a class. You can create multiple objects that are [[Prototype]]-linked to a common object. But by default, no copying occurs, and thus these objects don’t end up totally separate and disconnected from each other, but rather, quite linked.  
+new Foo() results in a new object (we called it a), and that new object a is internally [[Prototype]]-linked to the Foo.prototype object.  
+In JavaScript, we don’t make copies from one object (“class”) to another (“instance”). We make links between objects.  
+This mechanism is often called prototypal inheritance.  
+Inheritance implies a copy operation, and JavaScript doesn’t copy object properties (natively, by default). Instead, JS creates a link between two objects, where one object can essentially delegate property/function access to another object. 
+The Foo.prototype object by default (at declaration-time on line 1 of the snippet!) gets a public, nonenumerable property called .constructor, and this property is a reference back to the function (Foo in this case) that the object is associated with.  
+Moreover, we see that object a created by the “constructor” call new Foo() seems to also have a property on it called .constructor, which similarly points to “the function which created it.”  
+In actuality, the .constructor reference is also delegated up to Foo.prototype, which happens to, by default, have a .constructor that points at Foo.  
+function Foo() { /* .. */ }  
+Foo.prototype = { /* .. */ }; // create a new prototype object  
+var a1 = new Foo();  
+a1.constructor === Foo; // false!  
+a1.constructor === Object; // true!  
+When you put the new keyword in front of a normal function call, that makes that function call a “constructor call.”  
+The best thing to do is remind yourself that “constructor does not mean constructed by.”  
+The call to Object.create(..) creates a “new” object out of thin air, and links that new object’s internal [[Prototype]] to the object you specify.  
+Bar.prototype = Foo.prototype doesn’t create a new object for Bar.prototype to be linked to. It just makes Bar.prototype another reference to Foo.prototype, which effectively links Bar directly to the same object to which Foo links: Foo.prototype. This means when you start assigning, like Bar.prototype.myLabel = ..., you’re modifying not a separate object but the shared Foo.prototype object itself, which would affect any objects linked to Foo.prototype. 
+Bar.prototype = new Foo() does in fact create a new object that is duly linked to Foo.prototype as we’d want. But, it used the Foo(..) “constructor call” to do it. If that function has any side effects (such as logging, changing state, registering against other objects, adding data properties to this, etc.), those side effects happen at the time of this linking (and likely against the wrong object!), rather than only when the eventual Bar() “descendents” are created, as would likely be expected.  
+So, we’re left with using Object.create(..) to make a new object that’s properly linked, but without having the side effects of calling Foo(..). The slight downside is  
+that we have to create a new object, throwing the old one away(), instead of modifying the existing default object we’re provided.  
+// pre-ES6  
+// throws away default existing `Bar.prototype`  
+Bar.prototype = Object.create( Foo.prototype );  
+// ES6+  
+// modifies existing `Bar.prototype`  
+Object.setPrototypeOf( Bar.prototype, Foo.prototype );  
+Object.create(..) creates a new object (bar) linked to the object we specified (foo), which gives us all the power (delegation) of the [[Prototype]] mechanism, but without any of the unnecessary complication of new functions acting as classes and constructor calls, confusing .prototype and .constructor references, or any of that extra stuff.  
+Object.create(null) creates an object that has an empty (aka null) [[Prototype]] linkage, and thus the object can’t delegate anywhere. Since such an object has no prototype chain, the instanceof operator (explained earlier) has nothing to check, so it will always return false. These special empty-[[Prototype]] objects are often called “dictionaries,” as they are typically used purely for storing data in properties, mostly because they have no possible surprise effects from any delegated properties/functions on the [[Prototype]] chain, and are thus purely flat data storage. 
+ 
+The instanceof operator takes a plain object as its lefthand operand and a function as its righthand operand. 
+ 
+BEHAVIOR DELEGATION  
+Behavior delegation means to let some object (XYZ) provide a delegation (to Task) for property or method references if they are not found on the object (XYZ). 
+Mutual delegation (disallowed)  
+You cannot create a cycle where two or more objects are mutually delegated (bidirectionally) to each other. If you link B to A, and then try to link A to B, you will get an error. 
+ 
+Run-to-Completion  
+Because of JavaScript’s single-threading, the code inside of foo() (and bar()) is atomic, which means that once foo() starts running, the entirety of its code will finish before any of the code in bar() can run, or vice versa. This is called run-to-completion behavior.[foo and bar access same global variables]  
+Concurrency is when two or more “processes” are executing simultaneously over the same period, regardless of whether their individual constituent operations happen in parallel (at the same instant on separate processors or cores) 
+Avoid using == with Mixed Types 
+• The == operator applies a confusing set of implicit coercions when its arguments are of different types. 
+• Use === to make it clear to your readers that your comparison does not involve any implicit coercions. 
+• Use your own explicit coercions when comparing values of different types to make your program’s behavior clearer. 
+ 
+Minimize Use of the Global Object 
+Defining global variables pollutes the common namespace shared by everyone, introducing the possibility of accidental name collisions. 
+A program that assigns to an unbound variable simply creates a new global variable and assigns to it. This means that forgetting to declare a local variable silently turns it into a global variable. 
+ 
+Avoid with 
+function status(info) { 
+    var widget = new Widget(); 
+    with (widget) { 
+        setBackground("blue"); 
+        setForeground("white"); 
+        setText("Status: " + info); // ambiguous reference 
+        show(); 
+    } 
+} 
+Tempting to use with to “import” variables from objects serving as modules. 
+ 
+ 
+ 
+Closures 
+JavaScript allows you to refer to variables that were defined outside of the current function. 
+functions can refer to variables defined in outer functions even after those outer functions have returned. 
+JavaScript function values contain more information than just the code required to execute when they’re called. They also internally store any variables they may refer to that are defined in their enclosing scopes. Functions that keep track of variables from their containing scopes are known as closures. 
+They can update the values of outer variables. Closures actually store references to their outer variables, rather than copying their values. So updates are visible to any closures that have access to them. 
+ 
+Things to Remember 
+• Functions can refer to variables defined in outer scopes. 
+• Closures can outlive the function that creates them. 
+• Closures internally store references to their outer variables, and can both read and update their stored variables. 
+ 
+JavaScript supports lexical scoping. 
+JavaScript does not support block scoping: Variable definitions are not scoped to their nearest enclosing statement or block, but rather to their containing function. 
+A good way to think about the behavior of JavaScript variable declarations is to understand them as consisting of two parts: a declaration and an assignment. JavaScript implicitly “hoists” the declaration part to the top of the enclosing function and leaves the assignment in place. In other words, the variable is in scope for the entire function, but it is only assigned at the point where the var statement appears. 
+Hoisting can also lead to confusion about variable redeclaration. 
+Because redeclarations can lead to the appearance of distinct variables, some programmers prefer to place all var declarations at the top of their functions, effectively hoisting their variables manually, in order to avoid ambiguity. 
+function check_var(){ 
+for(var i=0;i<5;i++){ console.log('value of i ='+i); } => prints 0,1,2,3,4 
+console.log(' i ='+i);=> prints 5  
+} 
+check_var(); 
+The one exception to JavaScript’s lack of block scoping is, exceptions. 
+That is, try...catch binds a caught exception to a variable that is scoped just to the catch block 
+ 
+Use Immediately Invoked Function Expressions to Create Local Scopes 
+function wrapElements(a) { 
+    var result = [], i, n; 
+    for (i = 0, n = a.length; i < n; i++) { 
+        result[i] = function() { return a[i]; }; 
+    } 
+    return result; 
+} 
+ 
+var wrapped = wrapElements([10, 20, 30, 40, 50]); 
+var f = wrapped[0]; 
+f(); => undefined 
+Closures store their outer variables by reference, not by value. 
+So all the closures created by wrapElements refer to the single shared slot for i that was created before the loop. Since each iteration of the loop increments i until it runs off the end of the array, by the time we actually call one of the closures, it looks up index 5 of the array and returns undefined. 
+ 
+The solution is to force the creation of a local scope by creating a nested function and calling it right away. This technique, known as the immediately invoked function expression, or IIFE (pronounced “iffy”), is an indispensable workaround for JavaScript’s lack of block scoping. 
+ 
+The official difference between anonymous and named function expressions is that the latter binds its name as a local variable within the function. This can be used to write recursive function expressions. 
+The real usefulness of named function expressions, though, is for debugging. Most modern JavaScript environments produce stack traces for Error objects, and the name of a function expression is typically used for its entry in a stack trace. 
+ 
+ 
+ 
+ 
+Methods in JavaScript are nothing more than object properties that happen to be functions. 
+In general, calling a method on an object looks up the method and then uses the object as the method’s receiver. 
+Since methods are nothing more than functions called on a particular object, there is no reason why an ordinary function can’t refer to this. 
+ 
+• Method calls provide the object in which the method property is looked up as their receiver. 
+• Function calls provide the global object (or undefined for strict functions) as their receiver. Calling methods with function call syntax is rarely useful. 
+• Constructors are called with new and receive a fresh object as their receiver. 
+ 
+Higher-order functions are nothing more than functions that take other functions as arguments or return functions as their result. Taking a function as an argument (often referred to as a callback function because it is “called back” by the higher-order function) is a particularly powerful and expressive idiom, and one that JavaScript programs use heavily. 
+Use call to Call Methods with a Custom Receiver 
+The receiver of a function or method (i.e., the value bound to the special keyword this) is determined by the syntax of its caller. In particular, the method call syntax binds the object in which the method was looked up to this. However, it is sometimes necessary to call a function with a custom receiver, and the function may not already be a property of the desired receiver object. 
+The call method comes in handy for calling methods that may have been removed, modified, or overridden. 
+• Use the call method to call a function with a custom receiver. 
+• Use the call method for calling methods that may not exist on a given object. 
+• Use the call method for defining higher-order functions that allow clients to provide a receiver for the callback. 
+ 
+arity of a function is the number of arguments it expects 
+variadic or variable-arity function can take any number of arguments. 
+ 
+ 
+The apply method takes an array of arguments and calls the function as if each element of the array were an individual argument of the call. In addition to the array of arguments, the apply method takes a first argument that specifies the binding of this for the function being called. 
+ 
+The variadic version makes use of the fact that JavaScript provides every function with an implicit local variable called arguments. The arguments object provides an array-like interface to the actual arguments: It contains indexed properties for each actual argument and a length property indicating how many arguments were provided. 
+function average() { 
+    for (var i = 0, sum = 0, n = arguments.length; 
+         i < n; 
+         i++) { 
+        sum += arguments[i]; 
+    } 
+    return sum / n; 
+} 
+Variadic functions make for flexible interfaces; different clients can call them with different numbers of arguments. But by themselves, they also lose a bit of convenience: If consumers want to call them with a computed array of arguments, they have to use the apply method. 
+Use bind to Extract Methods with a Fixed Receiver 
+ 
+• Beware that extracting a method does not bind the method’s receiver to its object. 
+• When passing an object’s method to a higher-order function, use an anonymous function to call the method on the appropriate receiver. 
+• Use bind as a shorthand for creating a function bound to the appropriate receiver. 
+ 
+Use bind to Curry Functions 
+The bind method of functions is useful for more than just binding methods to receivers. 
+The technique of binding a function to a subset of its arguments is known as currying, named after the logician Haskell Curry, who popularized the technique in mathematics. Currying can be a succinct way to implement function delegation with less boilerplate than explicit wrapper functions. 
+• Use bind to curry a function, that is, to create a delegating function with a fixed subset of the required arguments. 
+• Pass null or undefined as the receiver argument to curry a function that ignores its receiver. 
+ 
+Every object is associated with some other object, known as its prototype. 
+• C.prototype is used to establish the prototype of objects created by new C(). 
+• Object.getPrototypeOf(obj) is the standard ES5 mechanism for retrieving obj’s prototype object. 
+• obj.__proto__ is a nonstandard mechanism for retrieving obj’s prototype object. 
+ 
+The function comes with a default prototype property, containing an object that starts out more or less empty. 
+the prototype property of a constructor function is used to set up the prototype relationship of new instances, the ES5 function Object.getPrototypeOf() can be used to retrieve the prototype of an existing object. 
+Some environments produce a nonstandard mechanism for retrieving the prototype of an object via a special __proto__ property. 
+• A class is a design pattern consisting of a constructor function and an associated prototype. 
+Prefer Object.getPrototypeOf to __proto__ 
+ES5 introduced Object.getPrototypeOf as the standard API for retrieving an object’s prototype, but only after a number of JavaScript engines had long provided the special __proto__ property for the same purpose. 
+In some environments, __proto__ is inherited from Object.prototype, so an object with a null prototype has no special __proto__ property. 
+Never Modify __proto__ 
+The special __proto__ property provides an additional power that Object.getPrototypeOf does not: the ability to modify an object’s prototype link.  
+The most obvious reason to avoid modifying __proto__ is portability: Since not all platforms support the ability to change an object’s prototype you simply can’t write portable code that does it. 
+portable code that does it. 
+Another reason to avoid modifying __proto__ is performance.  
+The biggest reason to avoid modifying __proto__ is for maintaining predictable behavior. 
+If a caller forgets the new keyword, then the function’s receiver becomes the global object: 
+ 
+Object.create takes a prototype object and returns a new object that inherits from it. 
+ 
+Store Methods on Prototypes 
+It’s perfectly possible to program in JavaScript without prototypes. We could implement the User class without defining anything special in its prototype 
+When we construct several instances of User,Instead of sharing the toString and checkPassword methods via the prototype, each instance contains a copy of both methods, for a total of six function objects. 
+Using prototype 
+function User(name, passwordHash) { 
+    this.name = name; 
+    this.passwordHash = passwordHash; 
+} 
+ 
+User.prototype.toString = function() { 
+    return "[User " + this.name + "]"; 
+}; 
+ 
+User.prototype.checkPassword = function(password) { 
+    return hash(password) === this.passwordHash; 
+}; 
+ 
+W/o prototype 
+function User(name, passwordHash) { 
+    this.name = name; 
+    this.passwordHash = passwordHash; 
+    this.toString = function() { 
+        return "[User " + this.name + "]"; 
+    }; 
+    this.checkPassword = function(password) { 
+        return hash(password) === this.passwordHash; 
+    }; 
+} 
+Use Closures to Store Private Data 
+JavaScript’s object system does not particularly encourage or enforce information hiding. The name of every property is a string, and any piece of a program can get access to any of the properties of an object simply by asking for it by name. 
+Closures are an austere data structure. They store data in their enclosed variables without providing direct access to those variables. The only way to gain access to the internals of a closure is for the function to provide access to it explicitly. 
+function User(name, passwordHash) { 
+    this.toString = function() { 
+        return "[User " + name + "]"; 
+    }; 
+    this.checkPassword = function(password) { 
+        return hash(password) === passwordHash; 
+    }; 
+} 
+A downside to this pattern is that, in order for the variables of the constructor to be in scope of the methods that use them, the methods must be placed on the instance object. 
+• Call the superclass constructor explicitly from subclass constructors, passing this as the explicit receiver. 
+• Use Object.create to construct the subclass prototype object to avoid calling the superclass constructor. 
+ 
+Implicit shadowing 
+var anotherObject = { 
+    a: 2 
+}; 
+ 
+var myObject = Object.create( anotherObject ); 
+ 
+anotherObject.a; // 2 
+myObject.a; // 2 
+ 
+anotherObject.hasOwnProperty( "a" ); // true 
+myObject.hasOwnProperty( "a" ); // false 
+ 
+myObject.a++; // oops, implicit shadowing! 
+ 
+anotherObject.a; // 2 
+myObject.a; // 3 
+ 
+myObject.hasOwnProperty( "a" ); // true 
+Though it may appear that myObject.a++ should (via delegation) look up and just increment the anotherObject.a property itself in place, instead the ++ operation corresponds to myObject.a = myObject.a + 1. The result is [[Get]] looking up a property via [[Prototype]] to get the current value 2 from anotherObject.a, incrementing the value by one, then [[Put]] assigning the 3 value to a new shadowed property a on myObject. 
+If you wanted to increment anotherObject.a, the only proper way is anotherObject.a++. 
+ 
+Inheritance implies a copy operation, and JavaScript doesn’t copy object properties (natively, by default). Instead, JS creates a link between two objects, where one object can essentially delegate property/function access to another object. 
+The fact is, .constructor on an object arbitrarily points, by default, at a function that, reciprocally, has a reference back to the object—a reference that it calls .prototype. The words “constructor” and “prototype” only have a loose default meaning that might or might not hold true later. The best thing to do is remind yourself that “constructor does not mean constructed by.” 
+ 
+• Inheriting from standard classes tends to break due to special internal properties such as [[Class]]. 
+ 
+Object.create(null) creates an object that has an empty (aka null) [[Prototype]] linkage, and thus the object can’t delegate anywhere. Since such an object has no prototype chain, the instanceof operator (explained earlier) has nothing to check, so it will always return false. These special empty-[[Prototype]] objects are often called “dictionaries,” as they are typically used purely for storing data in properties, mostly because they have no possible surprise effects from any delegated properties/functions on the [[Prototype]] chain, and are thus purely flat data storage. 
+ 
+Declaring variables with ‘let’  
+Variables declared with let have block scope, meaning they can only be accessed within the block (or sub-blocks) they are declared in. 
+A block is the body of a statement or function. It is the area between the opening and closing curly braces, { and }. 
+ 
+var words = ["function", "scope"];  
+for(var i = 0; i < words.length; i++)  
+{ 
+   var word = words[i];    
+  for(var i = 0; i < word.length; i++)  
+  {      
+var char = word[i]; 
+console.log('char', i, char);    
+  }; 
+}; 
+This would cause the first word function to be processed but not the second word scope, because by the time the inner loop finishes, i is equal to 7, causing the outer loop to stop before processing the second word. 
+ 
+[concept of variables being in scope before they are declared, called hoisting] 
+HOW HOISTING WORKS WITH LET 
+Variables declared with let and var both have a behavior called hoisting. 
+When a let variable is accessed in scope before it is declared, it throws a reference error. 
+A var will be undefined if it’s accessed before it’s declared; a let throws an exception. 
+ 
+Declaring variables with ‘const’ 
+The keyword const stands for constant, as in never changing. 
+Constants cannot be reassigned. This means that once you assign the value of a constant, any attempt to assign a new value will result in an error. 
+ 
+ 
