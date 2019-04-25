@@ -1,4 +1,3 @@
-# Angular
 The Angular CLI generates files in order for your Angular application to be served successfully. 
 main.bundle.js, which is the transpiled code that is specific to your application 
  vendor.bundle.js which includes all the third-party libraries and frameworks you depend on (including Angular) 
@@ -138,6 +137,10 @@ The @ViewChild() decorator is handy when you need a reference to a child compone
 The local variable approach is simple and easy. But it is limited because the parent-child wiring must be done entirely within the parent template. The parent component itself has no access to the child. 
 You can't use the local variable technique if an instance of the parent component class must read or write child component values or must call child component methods. 
 When the parent component class requires that kind of access, inject the child component into the parent as a ViewChild. 
+By default VIEWCHILD will give child Component access, but if you want access to child HTML Element use  
+<child #serverContentInput> </child> 
+@ViewChild('child’, {read: ElementRef}) serverChildInput: ElementRef; 
+ 
  
 The @ViewChildren() decorator would give you references to several children of the same type. 
  
@@ -180,6 +183,9 @@ Use the :host pseudo-class selector to target styles in the element that hosts(p
 The :host selector is the only way to target the host element. You can't reach the host element from inside the component with other selectors because it's not part of the component's own template. The host element is in a parent component's template. 
 :host-context 
 Sometimes it's useful to apply styles based on some condition outside of a component's view. For example, a CSS theme class could be applied to the document <body> element, and you want to change how your component looks based on that. 
+The ::ng-deep pseudo-class selector 
+If we want our component styles to cascade to all child elements of a component, but not to any other element on the page. 
+This combination of selectors is useful for example for applying styles to elements that were passed to the template using ng-content. 
  
 View encapsulation modes 
 Shadow DOM introduces scopes for CSS styles and encapsulation of DOM nodes in the browser. Shadow DOM allows you to hide the internals of a selected component from the global DOM tree. 
@@ -193,6 +199,27 @@ Angular offers two CD strategies: Default and OnPush. If all components use the 
 If a particular component declares the OnPush strategy, the Zone checks this component and its children only if the bindings to the component’s input properties have changed, or if the component uses AsyncPipe, and the corresponding observable started emitting values. 
 If a component that has the OnPush strategy changes a value of one of its properties bound to its template, the change detection cycle won’t be initiated. To declare the OnPush strategy, add the following line to the @Component() decorator: 
 changeDetection: ChangeDetectionStrategy.OnPush 
+The following frequently used browser mechanisms are patched to support change detection: 
+all browser events (click, mouseover, keyup, etc.)  
+setTimeout() and setInterval() 
+Ajax requests 
+Each Angular component has an associated change detector, which is created at application startup time. 
+How change detection works? 
+for each expression used in the template, it's comparing the current value of the property used in the expression with the previous value of that property. 
+By default, Angular does not do deep object comparison to detect changes, it only takes into account properties used by the template. 
+When using OnPush detectors, then the framework will check an OnPush component when any of its input properties changes, when it fires an event, or when an Observable fires an event 
+If we build our application using immutable objects and immutable lists only, its possible to use OnPush everywhere transparently, without the risk of stumbling into change detection bugs. 
+Avoiding change detection loops: Production vs Development mode 
+One of the important properties of Angular change detection is that unlike Angular 1 it enforces a uni-directional data flow: when the data on our controller classes gets updated, change detection runs and updates the view. 
+But that updating of the view does not itself trigger further changes which on their turn trigger further updates to the view, creating what in Angular 1 was called a digest cycle 
+turning on/off change detection, and triggering it manually 
+constructor(private ref: ChangeDetectorRef) { 
+    ref.detach(); 
+    setInterval(() => { 
+      this.ref.detectChanges(); 
+    }, 5000); 
+  } 
+Base class for Angular Views, provides change detection functionality. A change-detection tree collects all views that are to be checked for changes. Use the methods to add and remove views from the tree, initiate change-detection, and explicitly mark views as dirty, meaning that they have changed and need to be rerendered. 
 COMPONENT LIFECYCLE 
  
 The callbacks shown on the light-gray background will be invoked only once, and those on the darker background can be invoked multiple times during the component life span. The user sees the component after the initialization phase is complete. Then the change detection mechanism ensures that the component’s properties stay in sync with its UI. If the component is removed from the DOM tree as a result of the router’s navigation or a structural directive (such as *ngIf), Angular initiates the destroy phase. 
@@ -213,7 +240,7 @@ Angular elements are Angular components packaged as custom elements, a web stand
 A custom element extends HTML by allowing you to define a tag whose content is created and controlled by JavaScript code. The browser maintains a CustomElementRegistry of defined custom elements (also called Web Components), which maps an instantiable JavaScript class to an HTML tag. 
 The @angular/elements package exports a createCustomElement() API that provides a bridge from Angular's component interface and change detection functionality to the built-in DOM API. 
 Transforming a component to a custom element makes all of the required Angular infrastructure available to the browser. 
-How it workslink 
+How it works 
 Use the createCustomElement() function to convert a component into a class that can be registered with the browser as a custom element. After you register your configured class with the browser's custom-element registry, you can use the new element just like a built-in HTML element in content that you add directly into the DOM: 
 <my-popup message="Use Angular!"></my-popup> 
  
@@ -226,6 +253,13 @@ Structural directives—change the DOM layout by adding and removing DOM element
 Attribute directives—change the appearance or behavior of an element, component, or another directive. 
 An attribute directive minimally requires building a controller class annotated with @Directive, which specifies the selector that identifies the attribute. 
  ElementRef in the directive's constructor to inject a reference to the host DOM element. ElementRef grants direct access to the host DOM element through its nativeElement property. 
+HostBinding 
+Decorator that marks a DOM property as a host-binding property. 
+Angular automatically checks host property bindings during change detection, and if a binding changes it updates the host element of the directive. 
+Changes color for the elements where the directive is applied 
+@HostBinding(‘style.color’) color: string = ‘green’;    
+@HostBinding(‘style.color’) 
+ get color() { return “green”; }  
 Respond to user-initiated events 
 The directive could be more dynamic. It could detect when the user mouses into or out of the element and respond by setting or clearing the highlight color. 
 The @HostListener decorator lets you subscribe to events of the DOM element that hosts an attribute directive. 
@@ -243,6 +277,7 @@ Pass values into the directive with an @Input data bindinglink
 @Input(‘appHighlight’) highlight: string; 
 <p [appHighlight] ='green' >This is attritue directive</p> 
  
+Check about ‘ExportAs’ (used to export directive) 
 Structural Directives 
 Structural directives are responsible for HTML layout. They shape or reshape the DOM's structure, typically by adding, removing, or manipulating elements. 
 Why remove rather than hide? 
@@ -256,13 +291,48 @@ The asterisk is "syntactic sugar" for something a bit more complicated. Internal
 </ng-template> 
 The *ngIf directive moved to the <ng-template> element where it became a property binding,[ngIf]. 
 The rest of the <div>, including its class attribute, moved inside the <ng-template> element. 
+The <ng-template> 
+The <ng-template> is an Angular element for rendering HTML. It is never displayed directly. In fact, before rendering the view, Angular replaces the <ng-template> and its contents with a comment. 
+If there is no structural directive and you merely wrap some elements in a <ng-template>, those elements disappear. 
+Angular is already using ng-template under the hood in many of the structural directives: ngIf, ngFor and ngSwitch. 
+<div class="lessons-list" *ngIf="lessons else loading"> … 
+EQUIVALENT TO 
+<ng-template [ngIf]="lessons" [ngIfElse]="loading"> 
+<div class="lessons-list"> ...  
+desugaring: 
+the element onto which the structural directive ngIf was applied has been moved into an ng-template  
+The expression of *ngIf has been split up and applied to two separate directives, using the [ngIf] and [ngIfElse] template input variable syntax 
+ 
+Multiple Structural Directives 
+<div class="lesson" *ngIf="lessons"  
+       *ngFor="let lesson of lessons"> 
+This would not work! Instead, we would get the following error message 
+Uncaught Error: Template parse errors: Can't have multiple template bindings on one element. Use only one attribute 
+This means that its not possible to apply two structural directives to the same element. 
+ng-container structural directive allows to apply a structural directive to a section of the page without having to create an extra element 
 One structural directive per host element 
 You may apply only one structural directive to an element. 
 Use <ng-container> when there's no single element to host the directive. The Angular <ng-container> is a grouping element that doesn't interfere with styles or layout because Angular doesn't put it in the DOM. 
 The <ng-container> is a syntax element recognized by the Angular parser. It's not a directive, component, class, or interface. It's more like the curly braces in a JavaScript if-block. 
-The <ng-template> 
-The <ng-template> is an Angular element for rendering HTML. It is never displayed directly. In fact, before rendering the view, Angular replaces the <ng-template> and its contents with a comment. 
-If there is no structural directive and you merely wrap some elements in a <ng-template>, those elements disappear. 
+There is another major use case for the ng-container directive: it can also provide a placeholder for injecting a template dynamically into the page. 
+Dynamic Template Creation with the ngTemplateOutlet directive 
+We can take the template itself and instantiate it anywhere on the page, using the ngTemplateOutlet directive: 
+<ng-template #loading> 
+<div>Loading...</div>  
+</ng-template> 
+<ng-container *ngTemplateOutlet="loading"></ng-container> 
+Template Context 
+Inside the ng-template tag body, we have access to the same context variables that are visible in the outer template. 
+But each template can also define its own set of input variables. 
+<ng-template #estimateTemplate let-lessonsCounter="estimate"> 
+The context object is passed to ngTemplateOutlet via the context property, that can receive any expression that evaluates to an object 
+<ng-container   
+   *ngTemplateOutlet="estimateTemplate;context:ctx"> 
+</ng-container> 
+ctx ==> object which properties used {estimate: value,….} 
+The template can be injected just like any other DOM element or component, by providing the template reference name to the ViewChild decorator. 
+Also we can also pass a template as an input parameter. 
+<child [loadingtemplate]=”estimateTemplate”></child> 
 Creating a directive is similar to creating a component. 
 Import the Directive decorator (instead of the Component decorator). 
 Import the Input, TemplateRef, and ViewContainerRef symbols; you'll need them for any structural directive. 
@@ -300,6 +370,7 @@ Dependencies are services or objects that a class needs to perform its function.
  DI allows you to decouple application components and services by sparing them from knowing how to create their dependencies. 
 Angular documentation uses the concept of a token, which is an arbitrary key representing an object to be injected. You map tokens to values for DI by specifying providers. A provider is an instruction to Angular about how to create an instance of an object for future injection into a target component, service, or directive. 
 DI increases the testability of your components in isolation. You can easily inject mock objects if you want to unit test your code. 
+DI is about creating and managing dependencies, and the framework component that does this is dubbed the injector. 
 In order to get a service from a dependency injector, you have to give it a token. Angular usually handles this transaction by specifying a constructor parameter and its type. The parameter type serves as the injector lookup token. Angular passes this token to the injector and assigns the result to the parameter. 
 INJECTORS AND PROVIDERS 
 Each component can have an Injector instance capable of injecting objects or primitive values into a component. Any Angular application has a root injector available to all of its modules. To let the injector know what to inject, you specify the provider. An injector will inject the object or value specified in the provider into the constructor of a component. Providers allow you to map a custom type (or a token) to a concrete implementation of this type (or value). 
@@ -312,6 +383,9 @@ The @Injectable() decorator has the providedIn metadata option, where you can sp
 The @NgModule() and @Component() decorators have the providers metadata option, where you can configure providers for NgModule-level or component-level injectors.  
 The providers line instructs the injector as follows: “When you need to construct an object that has an argument of type ProductService, create an instance of the registered class for injection into this object.” 
 The providers property can be specified in the @Component() annotation or @NgModule. 
+providers: [ProductService] <=Equivalent to =>  
+providers:({ provide: ProductService, useClass: ProductService }) 
+Provide => is a token. This token is used to identify the dependency to                          inject. 
 declare a provider using the following properties: 
 useClass— To map a token to a class 
 useFactory— To map a token to a factory function that instantiates objects based on certain criteria 
@@ -326,6 +400,22 @@ Ng-level provides service(same instance) for whole module.
 Component-level providers configure each component instance's own injector. Angular can only inject the corresponding services in that component instance or one of its descendant component instances. Angular can't inject the same service instance anywhere else. 
 A component-provided service may have a limited lifetime. Each new instance of the component gets its own instance of the service. When the component instance is destroyed, so is that service instance. 
 Individual components within an NgModule have their own injectors. You can limit the scope of a provider to a component and its children by configuring the provider at the component level using the @Component metadata. 
+Explicit injection using injector 
+Explicit injections using Angular's Injector service. This is the same injector Angular uses to support DI. 
+constructor( private injector:Injector) { 
+  this.product=injector.get(ProductService); } 
+Avoid this pattern as it exposes the DI container to your implementation and adds a bit of noise. 
+Using InjectionToken 
+There are times when the dependency we define is either a primitive, interface, callable type, array or parameterized type, object, or function. In such a scenario, the class token cannot be used as there is no class. Angular solves this problem using InjectionToken 
+1) To register a dependency using InjectionToken, we first need to create the InjectionToken class instance: 
+       export const APP_CONFIG = new InjectionToken('Application Configuration'); 
+2) Then, use the token to register the dependency: 
+{ provide: APP_CONFIG, useValue: {name:'Test App', gridSetting: {...} ...}); 
+3) And finally, inject the dependency anywhere using the @Inject decorator: 
+constructor(@Inject(APP_CONFIG) config) { } 
+Interestingly, when @Inject() is not present, the injector uses the type/class name of the parameter (class token) to locate the dependency. 
+Angular also supports string tokens 
+{ provide: 'appconfig', useValue: ….} 
 Element injectors 
 An injector does not actually belong to a component, but rather to the component instance's anchor element in the DOM. A different component instance on a different DOM element uses a different injector. 
 Directives can also have dependencies, and you can configure providers in their @Directive() metadata. When you configure a provider for a component or directive using the providers property, that provider belongs to the injector for the anchor DOM element. 
@@ -384,6 +474,11 @@ constructor(@Optional() private logger: Logger) {}
 When using @Optional(), your code must be prepared for a null value. If you don't register a logger provider anywhere, the injector sets the value of logger to null. 
 constructor(@Host() @Optional() private logger: Logger) {} 
 The @Host() function decorating the constructor property ensures that you get a reference to the cache service from the parent. Angular throws an error if the parent lacks that service, even if a component higher in the component tree includes it. 
+@self 
+constructor property ensures that you get new instance of the service and not the reference from the parent. 
+@SkipSelf 
+constructor property ensures that you get the reference from the parent and not the new instance of the service. 
+ 
 Inject 
 A parameter decorator on a dependency parameter of a class constructor that specifies a custom provider of the dependency. 
 When @Inject() is not present, the injector uses the type annotation of the parameter as the provider. 
@@ -694,4 +789,126 @@ class SsnValidatorDirective {}
 You register the validator function using the  predefined NG_VALIDATORS Angular token. This token is, in turn, injected by the NgModel directive, and NgModel gets the list of all validators attached to the HTML element. Then, NgModel passes validators to the FormControl instance it implicitly creates. The same mechanism is responsible for running validators; directives are just a different way to configure them. The multi property lets you associate multiple values with the same token. When the token is injected into the NgModel directive, NgModel gets a list of values instead of a single value. This enables you to pass multiple validators. 
  
  
+HTTP module 
+Modern browsers support two different APIs for making HTTP requests: the XMLHttpRequest interface and the fetch() API. 
+The HttpClient in @angular/common/http offers a simplified client HTTP API for Angular applications that rests on the XMLHttpRequest interface exposed by browsers. Additional benefits of HttpClient include testability features, typed request and response objects, request and response interception, Observable apis, and streamlined error handling. 
+How to use HttpClient 
+1) import HttpClientModule into the AppModule 
+2) inject the HttpClient into an application class 
+HTTP GET 
+Constructs an observable that, when subscribed, causes the configured GET request to execute on the server. 
+By default the response is in JSON format.  
+To change response, pass required format to get method. {responseType: ‘text’} 
+To get response header and body pass {observe: ‘response’} to the method. 
+HTTP Request Parameters 
+The HTTP GET can also receive parameters, that correspond to the parameters in the HTTP url. 
+build the HTTPParams object by chaining successive set() methods. This is because HTTPParams is immutable, and its API methods do not cause object mutation. 
+params = new HttpParams() 
+    .set('orderBy', '"$key"') 
+    .set('limitToFirst', "1"); 
+ 
+Equivalent fromString HTTP Parameters Syntax 
+params = new HttpParams({ 
+  fromString: 'orderBy="$key"&limitToFirst=1'  }); 
+ 
+Equivalent request() API 
+The GET calls that we saw above can all be rewritten in a more generic API, that also supports the other PUT, POST, DELETE methods. 
+this.http 
+    .request( 
+        "GET", url, params); 
+ 
+HTTP Headers 
+If we want to add custom HTTP Headers to our HTTP request. 
+headers = new HttpHeaders() 
+            .set("X-CustomHeader", "custom header value"); 
+ 
+PUT ==> methods typically used for data modification. PUT call         will replace the whole content of the course path with         a new object, even though we usually only want to               modify a couple of properties. 
+PATCH ==> instead of providing a completely new version of a             resource, what we want to do is to just update a               single property. 
+DELETE ==> logical delete of some data 
+POST ==> Operation that we are trying to do does not fit the            description of any of the methods above (GET, PUT,              PATCH, DELETE), then we can use the HTTP wildcard              modification operation: POST. 
+This operation is typically used to add new data to        the database 
+ 
+Getting error details 
+Two types of errors can occur. The server backend might reject the request, returning an HTTP response with a status code such as 404 or 500. These are error responses. 
+Or something could go wrong on the client-side such as a network error that prevents the request from completing successfully or an exception thrown in an RxJS operator. These errors produce JavaScript ErrorEvent objects. 
+The HttpClient captures both kinds of errors in its HttpErrorResponse and you can inspect that response to figure out what really happened. 
+ 
+RxJs 
+Reactive programming focuses on propagating changes without our having to explicitly specify how the propagation happens. This allows us to state what our code should do, without having to code every step to do it. 
+RxJS is a JavaScript implementation of the Reactive Extensions, or Rx. 
+An Observable represents a stream of data. 
+[If an action has impact outside of the scope where it happens, we call this a side effect. Changing a variable external to our function, printing to the console, or updating a value in a database are examples of side effects.] 
+An Observable provides us with a stream of values that we can manipulate as a whole instead of handling a single isolated event each time. 
+The Observable sequence, or simply Observable is central to the Rx pattern. An Observable emits its values in order—like an iterator—but instead of its consumers requesting the next value, the Observable “pushes” values to consumers as they become available. 
+RxJS is push-based, so the source of events (the Observable) will push new values to the consumer (the Subscriber), without the consumer requesting the next value. 
+An Observable doesn’t start streaming items until it has at least one Observer subscribed to it. 
+Like iterators, an Observable can signal when the sequence is completed. 
+Using Observables, we can declare how to react to the sequence of elements, instead of reacting to individual items. 
+Creating Observables 
+const observable = Observable.create(observer => { 
+       observer.next( "Simon" ); 
+       observer.next( "Jen" ); 
+       observer.complete(); // We are done  
+     }); 
+Whenever an event happens in an Observable, it calls the related method in all of its Subscribers. Subscribers have to implement the Observer interface. 
+The Observer interface contains three methods: next, complete, and error. 
+The create method in the Rx.Subscriber class takes functions for the next, complete, and error cases and returns a Subscriber instance. 
+const subscriber = Subscriber.create( 
+       value => console.log( `Next: ${value} ` ), 
+       error => console.log( `Error: ${error} ` ), 
+       () => console.log( "Completed" ) 
+     ); 
+In RxJS, methods that transform or query sequences are called operators. Operators are found in the static Rx.Observable object and in Observable instances. 
+Rx.Observable 
+From 
+from converts various other objects and data types into Observables. 
+OF 
+Each argument becomes a next notification. 
+FromEvent 
+Creates an Observable from DOM events, or Node.js EventEmitter events or others. 
+fromEvent accepts as a first argument event target, which is an object with methods for registering event handler functions. As a second argument it takes string that indicates type of event we want to listen for. 
+Range 
+Creates an Observable that emits a sequence of numbers within a specified range. 
+Interval 
+Timer 
+Creates an Observable that starts emitting after an dueTime and emits ever increasing numbers after each period of time thereafter. 
+ 
+OPERATORS 
+MAP 
+map is probably the most used operator. It takes an Observable and a function and applies that function to each of the values in the source Observable. It returns a new Observable with the transformed values. 
+It could be that the function we pass to map does some asynchronous computation to transform the value. In that case, map would not work as expected. For these cases, it would be better to use flatMap . 
+FILTER 
+REDUCE 
+reduce (also known as fold) takes an Observable and returns a new one that always contains a single item, which is the result of applying a function over each element. 
+FLATMAP 
+What can you do if you have an Observable whose emitted items are more Observables? 
+The flatMap operator takes an Observable A whose elements are also Observables, and returns an Observable with the flattened values of A’s child Observables. 
+ 
+EXPLICIT CANCELLATION 
+Observables themselves don’t have a method to get canceled. Instead, whenever we subscribe to an Observable we get a Subscription. We can then call the methodunsubscribe on the Subscription, and it will stop receiving notifications from the Observable. 
+Handling Errors 
+The default behavior is that whenever an error happens, the Observable stops emitting items, and complete is not called. 
+CATCHING ERRORS 
+Observable instances have the catchError operator, which allows us to react to an error in the Observable and continue with another Observable. 
+catchError takes either an Observable or a function that receives the error as a parameter and returns another Observable or throws error. 
+catchError is useful for reacting to errors in a sequence, and it behaves much like the traditional try/catch block. 
+ 
+RxJS’s Subject Class 
+A Subject is a type that implements both Observer and Observable types. As an Observer, it can subscribe to Observables, and as an Observable it can produce values and have Observers subscribe to it. 
+An RxJS Subject is a special type of Observable that allows values to be multicasted to many Observers. While plain Observables are unicast (each subscribed Observer owns an independent execution of the Observable), Subjects are multicast. 
+A Subject is like an Observable, but can multicast to many Observers. Subjects are like EventEmitters: they maintain a registry of many listeners. 
+subject = new Subject(); 
+subject.subscribe({ 
+next: (v) => console.log(`observerA: ${v}`) 
+}); 
+subject.next(1); 
+subject.next(2); 
+subject.complete(); 
+ReplaySubject 
+A variant of Subject that "replays" or emits old values to new subscribers. It buffers a set number of values and will emit those values immediately to any new subscribers in addition to emitting new values to existing subscribers. 
+BehaviorSubject 
+A variant of Subject that requires an initial value and emits its current value whenever it is subscribed to. 
+Similary to ReplaySubject(1) 
+AsyncSubject 
+A variant of Subject that only emits a value when it completes. It will emit its latest value to all its observers on completion. 
  
